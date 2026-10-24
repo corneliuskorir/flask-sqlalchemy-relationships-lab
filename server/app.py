@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, make_response
 from flask_migrate import Migrate
 
 from models import db, Event, Session, Speaker, Bio
@@ -16,30 +16,75 @@ db.init_app(app)
 
 # TODO: add functionality to all routes
 
-@app.route('/events')
+
+@app.route("/events")
 def get_events():
-    pass
+    events = [
+        {"id": event.id, "name": event.name, "location": event.location}
+        for event in Event.query.all()
+    ]
+    if events:
+        return make_response(events, 200)
+    return make_response({"message": "No events"}, 404)
 
 
-@app.route('/events/<int:id>/sessions')
+@app.route("/events/<int:id>/sessions")
 def get_event_sessions(id):
-    pass
+    event = Event.query.filter_by(id=id).first()
+    if event:
+        sessions = [
+            {"id": s.id, "title": s.title, "start_time": s.start_time.isoformat()}
+            for s in event.sessions
+        ]
+
+        return make_response(sessions, 200)
+
+    return make_response({"error": "Event not found"}, 404)
 
 
-@app.route('/speakers')
+@app.route("/speakers")
 def get_speakers():
-    pass
+    spakers = [
+        {"id": speaker.id, "name": speaker.name} for speaker in Speaker.query.all()
+    ]
+    if spakers:
+        return make_response(spakers, 200)
+
+    return make_response({"message": "No speakers"})
 
 
-@app.route('/speakers/<int:id>')
+@app.route("/speakers/<int:id>")
 def get_speaker(id):
-    pass
+    speaker = Speaker.query.filter_by(id=id).first()
+
+    if speaker:
+        return make_response(
+            {
+                "id": speaker.id,
+                "name": speaker.name,
+                "bio_text": getattr(speaker, "bio_text", "No bio available"),
+            },
+            200,
+        )
+    return make_response({"error": "Speaker not found"}, 404)
 
 
-@app.route('/sessions/<int:id>/speakers')
+@app.route("/sessions/<int:id>/speakers")
 def get_session_speakers(id):
-    pass
+    session = Session.query.filter_by(id=id).first()
+
+    if session:
+        speakers = [
+            {
+                "id": s.id,
+                "name": s.name,
+                "bio_text": getattr(s, "bio_text", "No bio available"),
+            }
+            for s in session.speakers
+        ]
+        return make_response(speakers, 200)
+    return make_response({"error": "Session not found"}, 404)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(port=5555, debug=True)
